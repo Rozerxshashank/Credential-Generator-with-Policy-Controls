@@ -1,9 +1,4 @@
-# policy.py
-# this file contains the rules for our credential maker program
-# very simple and easy to understand
-
 from typing import List, Tuple
-
 # these are the rules
 POLICY = {
     "allowed_types": ["api_key"],
