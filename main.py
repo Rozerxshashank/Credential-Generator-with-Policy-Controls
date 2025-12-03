@@ -1,11 +1,13 @@
+# main.py
+# simple credential maker program without Pydantic
+
 import os
 import json
 import sqlite3
 import secrets
 import uuid
 from datetime import datetime, timedelta
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Body
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 import policy
@@ -15,7 +17,7 @@ load_dotenv()
 # master key for encrypting secrets
 MASTER_KEY = os.getenv("MASTER_KEY")
 if not MASTER_KEY:
-    # if not found, create one
+    # if not found, create one (not good for real apps)
     MASTER_KEY = Fernet.generate_key().decode()
 
 fernet = Fernet(MASTER_KEY.encode())
@@ -65,20 +67,31 @@ def encrypt_secret(secret):
 def decrypt_secret(enc):
     return fernet.decrypt(enc.encode()).decode()
 
-app = FastAPI(title="Simple Credential Maker")
+app = FastAPI(title="Simple Credential Maker (no Pydantic)")
 
-# input format for creating keys
-class CreateRequest(BaseModel):
-    principal: str
-    type: str = "api_key"
-    scopes: list = []
-    ttl_seconds: int = 3600
-    length: int = 40
-
-
+# Create credential endpoint now accepts a plain JSON body (dict)
+# Example JSON body:
+# {
+#   "principal": "student1",
+#   "type": "api_key",
+#   "scopes": ["read:storage"],
+#   "ttl_seconds": 3600,
+#   "length": 40
+# }
 @app.post("/credentials")
-def create_credential(req: CreateRequest):
-    data = req.dict()
+def create_credential(req: dict = Body(...)):
+    # make sure defaults exist and types are reasonable
+    data = {
+        "principal": req.get("principal", ""),
+        "type": req.get("type", "api_key"),
+        "scopes": req.get("scopes", []) or [],
+        "ttl_seconds": int(req.get("ttl_seconds", 3600)),
+        "length": int(req.get("length", 40))
+    }
+
+    # basic validation: principal must be present
+    if not data["principal"]:
+        raise HTTPException(status_code=400, detail="principal_required")
 
     # check the rules from policy.py
     ok, why = policy.validate_request(data)
@@ -136,11 +149,16 @@ def list_credentials():
 
     all_data = []
     for r in rows:
+        scopes = []
+        try:
+            scopes = json.loads(r["scopes"]) if r["scopes"] else []
+        except Exception:
+            scopes = []
         all_data.append({
             "id": r["id"],
             "principal": r["principal"],
             "type": r["type"],
-            "scopes": json.loads(r["scopes"]),
+            "scopes": scopes,
             "created_at": r["created_at"],
             "expires_at": r["expires_at"],
             "status": r["status"]
