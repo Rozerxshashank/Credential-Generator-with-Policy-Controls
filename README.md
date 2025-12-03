@@ -26,9 +26,9 @@ It lets you:
 
 ## Project Structure
 
-You effectively have two main files:
+We effectively have two main files:
 
-- `main.py` (or similar name) – the FastAPI app:
+- `main.py`  the FastAPI app:
 
   - DB setup and helpers  
   - `/credentials` create/list  
