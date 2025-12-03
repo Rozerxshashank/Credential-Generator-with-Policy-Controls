@@ -1,14 +1,16 @@
-from typing import List, Tuple
-# these are the rules
+# policy.py
+# simple rules for the credential maker (no typing module, easy to read)
+
+# the policy dictionary
 POLICY = {
     "allowed_types": ["api_key"],
 
     "api_key": {
-        "min_length": 32,        # token must be at least 32 characters
-        "ttl_max_seconds": 86400,  # max expiry = 24 hours
+        "min_length": 32,         # token must be at least 32 characters
+        "ttl_max_seconds": 86400, # max expiry = 24 hours
         "require_approval_scopes": [
-            "admin",    # needs approval
-            "write:*"   # anything starting with write: needs approval
+            "admin",   # exact match needs approval
+            "write:*"  # prefix match: anything starting with "write:" needs approval
         ]
     },
 
@@ -18,8 +20,11 @@ POLICY = {
 }
 
 
-def validate_request(req: dict) -> Tuple[bool, str]:
-    """Check if request follows basic rules."""
+def validate_request(req):
+    """
+    Check if request follows basic rules.
+    Returns: (True, "ok") or (False, "reason")
+    """
     ctype = req.get("type", "api_key")
     if ctype not in POLICY["allowed_types"]:
         return False, "type_not_allowed"
@@ -35,19 +40,27 @@ def validate_request(req: dict) -> Tuple[bool, str]:
     return True, "ok"
 
 
-def requires_approval(scopes: List[str]) -> Tuple[bool, str]:
-    """Check if any scope is sensitive and needs approval."""
+def requires_approval(scopes):
+    """
+    Check if any scope is sensitive and needs approval.
+    Returns: (True, "reason") or (False, "ok")
+    """
     rules = POLICY["api_key"]["require_approval_scopes"]
+
+    # if scopes is None or not a list, treat as empty list
+    if not scopes:
+        return False, "ok"
 
     for s in scopes:
         for rule in rules:
-
-            if rule.endswith("*"):  # prefix match
+            # prefix rule (ends with *)
+            if rule.endswith("*"):
                 prefix = rule[:-1]
                 if s.startswith(prefix):
-                    return True, f"needs_approval_prefix_{rule}"
+                    return True, "needs_approval_prefix_" + rule
 
+            # exact match
             if s == rule:
-                return True, f"needs_approval_exact_{rule}"
+                return True, "needs_approval_exact_" + rule
 
     return False, "ok"
