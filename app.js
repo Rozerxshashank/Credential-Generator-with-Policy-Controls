@@ -37,24 +37,32 @@ btnNavAdmin.onclick = function() {
 
 var baseUrlInput = document.getElementById("base-url");
 var saveBtn = document.getElementById("btn-save-url");
-var myUrl = "https://credential-generator-with-policy-controls.onrender.com"; // Default
+
+var myUrl = "https://credential-generator-with-policy-controls.onrender.com"; 
+
+// Set the input box to show the real URL
+if(baseUrlInput) {
+    baseUrlInput.value = myUrl;
+}
 
 saveBtn.onclick = function() {
     myUrl = baseUrlInput.value;
+    // Remove trailing slash if user added it
+    if(myUrl.endsWith("/")) {
+        myUrl = myUrl.slice(0, -1);
+    }
     alert("URL Saved: " + myUrl);
 };
 
 // ==========================================
-// 3. USER PANEL: CREATE CREDENTIAL
+// 3. USER PANEL: CREATE CREDENTIAL (Unified ID Flow)
 // ==========================================
 
-var createBtn = document.querySelector("#form-create button"); 
+var btnCreate = document.getElementById("btn-create-submit");
 var createOutput = document.getElementById("result-create");
 
-createBtn.onclick = async function(e) {
-    e.preventDefault();
-
-    // 1. Get values from form
+btnCreate.onclick = async function() {
+    // 1. Get Data
     var p = document.getElementById("principal").value;
     var s = document.getElementById("scopes").value;
     var t = document.getElementById("ttl").value;
@@ -68,7 +76,9 @@ createBtn.onclick = async function(e) {
     };
 
     try {
-        // 2. Send request
+        // 2. Send Request
+        createOutput.style.display = "none"; // Hide previous result while loading
+        
         var response = await fetch(myUrl + "/credentials", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -77,42 +87,29 @@ createBtn.onclick = async function(e) {
 
         var json = await response.json();
 
-        // 3. Handle Errors (like Quota Exceeded)
+        // 3. Handle Errors
         if (!response.ok) {
             createOutput.innerHTML = `<div style="color:red; font-weight:bold;">Error: ${json.detail}</div>`;
-            createOutput.style.display = "block";
-            return;
         }
+        else {
+            // 4. SUCCESS - ALWAYS SHOW ID (Never the secret)
+            // We look for 'id' (added in main.py) or fallback to specific fields
+            var theId = json.id || json.credential_id || json.request_id;
 
-        // 4. Handle Pending (Approval Needed)
-        if (json.status === "pending") {
             createOutput.innerHTML = `
-                <div style="background:#fff7ed; border-left:4px solid #f97316; padding:12px; color:#9a3412;">
-                    <strong>⏳ Approval Required!</strong><br>
-                    Your request ID is below. Copy this to check your status later:<br><br>
-                    <div style="background:white; padding:8px; border:1px solid #fdba74; font-family:monospace; font-weight:bold;">
-                        ${json.request_id}
-                    </div>
-                </div>
-            `;
-        } 
-        // 5. Handle Issued (Success)
-        else if (json.status === "issued") {
-            createOutput.innerHTML = `
-                <div style="background:#f0fdf4; border-left:4px solid #4ade80; padding:12px; color:#166534;">
-                    <strong>✅ Success!</strong><br>
-                    Here is your new API Secret:<br><br>
-                    <div style="background:#14532d; color:#4ade80; padding:10px; font-family:monospace; border-radius:4px;">
-                        ${json.secret}
+                <div style="background:#eff6ff; border-left:4px solid #3b82f6; padding:12px; color:#1e40af;">
+                    <strong>🆔 ID Generated!</strong><br>
+                    Copy this ID and use <b>"Check Request Status"</b> below to claim your key:<br><br>
+                    <div style="background:white; padding:8px; border:1px solid #93c5fd; font-family:monospace; font-weight:bold; color:#1e3a8a;">
+                        ${theId}
                     </div>
                 </div>
             `;
         }
-
         createOutput.style.display = "block";
 
     } catch (err) {
-        createOutput.innerText = "Error connecting to server. Is it running?";
+        createOutput.innerText = "Error connecting to server. Is the backend running?";
         createOutput.style.display = "block";
     }
 };
@@ -121,21 +118,23 @@ createBtn.onclick = async function(e) {
 // 4. USER PANEL: CHECK STATUS (Claim Key)
 // ==========================================
 
-var checkBtn = document.querySelector("#form-check button");
+var btnCheck = document.getElementById("btn-check-submit");
 var checkOutput = document.getElementById("result-check");
 
-checkBtn.onclick = async function(e) {
-    e.preventDefault();
-    var id = document.getElementById("check-id").value;
+btnCheck.onclick = async function() {
+    var id = document.getElementById("check-id").value.trim();
+
+    if(!id) {
+        alert("Please enter an ID");
+        return;
+    }
 
     try {
-        //  Fetch the full list to find our ID
+        // Step A: Check Status via List
         var responseList = await fetch(myUrl + "/credentials");
         var dataList = await responseList.json();
         
         var myRequest = null;
-        
-        // Find ID in list
         for(var i=0; i<dataList.length; i++) {
             if(dataList[i].id === id) {
                 myRequest = dataList[i];
@@ -149,7 +148,7 @@ checkBtn.onclick = async function(e) {
             return;
         }
 
-        //  Show status or fetch secret
+        // Step B: Handle Status
         if (myRequest.status === "pending") {
             checkOutput.innerHTML = "⏳ <b>Status: Pending</b><br>Please ask an Admin to approve this request.";
             checkOutput.style.display = "block";
@@ -159,7 +158,7 @@ checkBtn.onclick = async function(e) {
             checkOutput.style.display = "block";
         }
         else if (myRequest.status === "active") {
-            // It's active! Fetch the secret using debug endpoint
+            // Step C: If Active, Fetch Secret
             var responseDebug = await fetch(myUrl + "/_debug/decrypt/" + id);
             var jsonDebug = await responseDebug.json();
             
@@ -197,7 +196,6 @@ listBtn.onclick = async function() {
 
         for(var i = 0; i < data.length; i++) {
             var item = data[i];
-            
             var statusColor = item.status === 'active' ? 'green' : (item.status === 'revoked' ? 'red' : 'orange');
 
             html += "<tr>";
@@ -219,17 +217,14 @@ listBtn.onclick = async function() {
 // ==========================================
 
 // --- APPROVE ---
-var approveBtn = document.querySelector("#form-approve button");
+var btnApprove = document.getElementById("btn-approve-submit");
 var approveOutput = document.getElementById("result-approve");
 
-approveBtn.onclick = async function(e) {
-    e.preventDefault();
-    var id = document.getElementById("approve-id").value;
+btnApprove.onclick = async function() {
+    var id = document.getElementById("approve-id").value.trim();
 
     try {
-        var response = await fetch(myUrl + "/requests/" + id + "/approve", {
-            method: "POST"
-        });
+        var response = await fetch(myUrl + "/requests/" + id + "/approve", { method: "POST" });
         var json = await response.json();
         
         if(!response.ok) {
@@ -245,17 +240,14 @@ approveBtn.onclick = async function(e) {
 };
 
 // --- REVOKE ---
-var revokeBtn = document.querySelector("#form-revoke button");
+var btnRevoke = document.getElementById("btn-revoke-submit");
 var revokeOutput = document.getElementById("result-revoke");
 
-revokeBtn.onclick = async function(e) {
-    e.preventDefault();
-    var id = document.getElementById("revoke-id").value;
+btnRevoke.onclick = async function() {
+    var id = document.getElementById("revoke-id").value.trim();
 
     try {
-        var response = await fetch(myUrl + "/credentials/" + id + "/revoke", {
-            method: "POST"
-        });
+        var response = await fetch(myUrl + "/credentials/" + id + "/revoke", { method: "POST" });
         var json = await response.json();
         
         if(!response.ok) {
@@ -271,12 +263,11 @@ revokeBtn.onclick = async function(e) {
 };
 
 // --- DEBUG ---
-var debugBtn = document.querySelector("#form-debug button");
+var btnDebug = document.getElementById("btn-debug-submit");
 var debugOutput = document.getElementById("result-debug");
 
-debugBtn.onclick = async function(e) {
-    e.preventDefault();
-    var id = document.getElementById("debug-id").value;
+btnDebug.onclick = async function() {
+    var id = document.getElementById("debug-id").value.trim();
 
     try {
         var response = await fetch(myUrl + "/_debug/decrypt/" + id);
