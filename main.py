@@ -59,7 +59,11 @@ def decrypt_secret(enc):
 app = FastAPI(title="Simple Credential Maker")
 
 # --- CORS FIX: SPECIFIC ORIGINS ONLY ---
-origins = ["https://credential-generator-with-policy-co.vercel.app/"] # We will lock this down later!
+origins = [
+    "http://127.0.0.1:5500",
+    "http://localhost:5500",
+    "https://credential-generator-with-policy-controls.vercel.app" 
+]
 
 app.add_middleware(
     CORSMiddleware,
