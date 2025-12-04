@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Credential Manager</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <aside class="sidebar">
+      <div class="brand">
+        <h2>🔑 CredManager</h2>
+      </div>
+      
+      <nav class="nav-menu">
+        <button id="nav-user" class="nav-item active">User Panel</button>
+        <button id="nav-admin" class="nav-item">Admin Panel</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <label>Backend URL</label>
+        <div class="url-box">
+          <input id="base-url" type="text" value="http://127.0.0.1:8000">
+          <button id="btn-save-url">Save</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+
+      <section id="view-user" class="view-section active">
+        <header class="view-header">
+          <h1>User Dashboard</h1>
+          <p>Request new API credentials for your applications.</p>
+        </header>
+
+        <div class="user-layout">
+          
+          <div class="card create-card">
+            <h2>Generate New Key</h2>
+            <form id="form-create">
+              <div class="input-group">
+                <label for="principal">Principal Name</label>
+                <input type="text" id="principal" placeholder="e.g. my-app-service" autocomplete="off" />
+              </div>
+
+              <div class="input-group">
+                <label for="scopes">Scopes (Permissions)</label>
+                <input type="text" id="scopes" placeholder="e.g. read:users, write:logs" />
+                <small>Tip: Scopes starting with 'write:' require Admin approval.</small>
+              </div>
+
+              <div class="row">
+                <div class="input-group">
+                  <label for="ttl">TTL (Seconds)</label>
+                  <input type="number" id="ttl" value="3600" />
+                </div>
+                <div class="input-group">
+                  <label for="len">Length</label>
+                  <input type="number" id="len" value="40" />
+                </div>
+              </div>
+
+              <button type="button" id="btn-create-submit" class="btn primary full-width">Request Key</button>
+            </form>
+            
+            <div id="result-create" class="output"></div>
+          </div>
+
+          <div class="card check-card" style="margin-top: 24px;">
+            <h2>Check Request Status</h2>
+            <p class="tiny-text">Have a pending ID? Check if it's approved and get your key.</p>
+            
+            <form id="form-check" class="flex-row">
+              <input type="text" id="check-id" placeholder="Paste Request ID here..." />
+              <button type="button" id="btn-check-submit" class="btn">Check Status</button>
+            </form>
+            
+            <div id="result-check" class="output"></div>
+          </div>
+
+        </div>
+      </section>
+
+      <section id="view-admin" class="view-section hidden">
+        <header class="view-header">
+          <h1>Admin Dashboard</h1>
+          <p>Monitor active keys, approve requests, and revoke access.</p>
+        </header>
+
+        <div class="admin-grid">
+          
+          <div class="card list-card">
+            <div class="card-header">
+              <h2>All Credentials</h2>
+              <div>
+                <button id="btn-list" class="btn primary">Refresh</button>
+                <button id="btn-list-clear" class="btn">Clear</button>
+              </div>
+            </div>
+            <div id="result-list" class="table-container">
+              <div class="empty-state">Click Refresh to load data.</div>
+            </div>
+          </div>
+
+          <div class="admin-sidebar">
+            
+            <div class="card action-card">
+              <h3>Approve Request</h3>
+              <p class="tiny-text">For pending keys requesting sensitive scopes.</p>
+              <form id="form-approve" class="flex-row">
+                <input type="text" id="approve-id" placeholder="Request ID..." />
+                <button type="button" id="btn-approve-submit" class="btn">Approve</button>
+              </form>
+              <div id="result-approve" class="output"></div>
+            </div>
+
+            <div class="card action-card border-red">
+              <h3 class="text-danger">Revoke Credential</h3>
+              <p class="tiny-text">Disable an active key immediately.</p>
+              <form id="form-revoke" class="flex-row">
+                <input type="text" id="revoke-id" placeholder="Credential ID..." />
+                <button type="button" id="btn-revoke-submit" class="btn danger">Revoke</button>
+              </form>
+              <div id="result-revoke" class="output"></div>
+            </div>
+
+            <div class="card action-card">
+              <h3>Debug Decrypt</h3>
+              <form id="form-debug" class="flex-row">
+                <input type="text" id="debug-id" placeholder="ID..." />
+                <button type="button" id="btn-debug-submit" class="btn">Decrypt</button>
+              </form>
+              <div id="result-debug" class="output"></div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+  
+  <script src="app.js" defer></script>
+</body>
+</html>

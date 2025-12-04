@@ -5,29 +5,26 @@ import secrets
 import uuid
 from datetime import datetime, timedelta
 from fastapi import FastAPI, HTTPException, Body
+from fastapi.middleware.cors import CORSMiddleware
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 import policy
 
 load_dotenv()
 
-# master key for encrypting secrets
+# Setup Encryption Key
 MASTER_KEY = os.getenv("MASTER_KEY")
 if not MASTER_KEY:
-    # if not found, create one (not good for real apps)
-    MASTER_KEY = Fernet.generate_key().decode()
+    MASTER_KEY = Fernet.generate_key().decode() #only for demo when not using .env for master key
 
 fernet = Fernet(MASTER_KEY.encode())
-
 DB_PATH = os.getenv("DB_PATH", "data.db")
 
-# connect to database
 def get_conn():
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
 
-# create table if it doesn't exist
 def init_db():
     conn = get_conn()
     cur = conn.cursor()
@@ -48,33 +45,38 @@ def init_db():
 
 init_db()
 
-# small helpers
 def now_iso():
     return datetime.utcnow().isoformat() + "Z"
-
 def make_id():
     return str(uuid.uuid4())
-
 def make_token(length=40):
     return secrets.token_urlsafe(length)[:length]
-
 def encrypt_secret(secret):
     return fernet.encrypt(secret.encode()).decode()
-
 def decrypt_secret(enc):
     return fernet.decrypt(enc.encode()).decode()
 
-app = FastAPI(title="Simple Credential Maker (no Pydantic)")
-# {
-#   "principal": "student1",
-#   "type": "api_key",
-#   "scopes": ["read:storage"],
-#   "ttl_seconds": 3600,
-#   "length": 40
-# }
+app = FastAPI(title="Simple Credential Maker")
+
+# --- CORS FIX: SPECIFIC ORIGINS ONLY ---
+origins = [
+    "http://127.0.0.1:5500",  # Your Live Server IP
+    "http://localhost:5500",  # Your Live Server localhost
+    "http://127.0.0.1:5501",  # Backup port just in case
+    "http://localhost:5501"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,    # <--- No more "*"
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+# ---------------------------------------
+
 @app.post("/credentials")
 def create_credential(req: dict = Body(...)):
-    # this make sure defaults exist and types are reasonable
     data = {
         "principal": req.get("principal", ""),
         "type": req.get("type", "api_key"),
@@ -83,11 +85,9 @@ def create_credential(req: dict = Body(...)):
         "length": int(req.get("length", 40))
     }
 
-    # basic validation: principal must be present
     if not data["principal"]:
         raise HTTPException(status_code=400, detail="principal_required")
 
-    # check the rules from policy.py
     ok, why = policy.validate_request(data)
     if not ok:
         raise HTTPException(status_code=400, detail=why)
@@ -97,14 +97,12 @@ def create_credential(req: dict = Body(...)):
     conn = get_conn()
     cur = conn.cursor()
 
-    # limit the number of active keys a user can have
     cur.execute("SELECT COUNT(*) as c FROM credentials WHERE principal=? AND status='active'", (data["principal"],))
     count = cur.fetchone()["c"]
     if count >= policy.POLICY["quotas"]["max_active_per_principal"]:
         conn.close()
         raise HTTPException(status_code=403, detail="quota_exceeded")
 
-    # if it needs approval, store as pending
     if need_approval:
         cid = make_id()
         created = now_iso()
@@ -115,9 +113,8 @@ def create_credential(req: dict = Body(...)):
         )
         conn.commit()
         conn.close()
-        return {"status": "pending", "request_id": cid, "reason": reason}
+        return {"status": "pending", "request_id": cid, "reason": reason, "id": cid}
 
-    # otherwise generate a key immediately
     token = make_token(data["length"])
     encrypted = encrypt_secret(token)
     cid = make_id()
@@ -131,7 +128,7 @@ def create_credential(req: dict = Body(...)):
     conn.commit()
     conn.close()
 
-    return {"status": "issued", "credential_id": cid, "secret": token, "expires_at": expires}
+    return {"status": "issued", "credential_id": cid, "secret": token, "expires_at": expires, "id": cid}
 
 
 @app.get("/credentials")
