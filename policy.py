@@ -21,10 +21,8 @@ POLICY = {
 
 
 def validate_request(req):
-    """
-    Check if request follows basic rules.
-    Returns: (True, "ok") or (False, "reason")
-    """
+    #Check if request follows basic rules.
+   #Returns: (True, "ok") or (False, "reason")
     ctype = req.get("type", "api_key")
     if ctype not in POLICY["allowed_types"]:
         return False, "type_not_allowed"
@@ -41,10 +39,8 @@ def validate_request(req):
 
 
 def requires_approval(scopes):
-    """
-    Check if any scope is sensitive and needs approval.
-    Returns: (True, "reason") or (False, "ok")
-    """
+    #Check if any scope is sensitive and needs approval.
+    #~Returns: (True, "reason") or (False, "ok")
     rules = POLICY["api_key"]["require_approval_scopes"]
 
     # if scopes is None or not a list, treat as empty list

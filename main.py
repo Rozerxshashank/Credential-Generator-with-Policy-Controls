@@ -1,6 +1,3 @@
-# main.py
-# simple credential maker program without Pydantic
-
 import os
 import json
 import sqlite3
@@ -68,9 +65,6 @@ def decrypt_secret(enc):
     return fernet.decrypt(enc.encode()).decode()
 
 app = FastAPI(title="Simple Credential Maker (no Pydantic)")
-
-# Create credential endpoint now accepts a plain JSON body (dict)
-# Example JSON body:
 # {
 #   "principal": "student1",
 #   "type": "api_key",
@@ -80,7 +74,7 @@ app = FastAPI(title="Simple Credential Maker (no Pydantic)")
 # }
 @app.post("/credentials")
 def create_credential(req: dict = Body(...)):
-    # make sure defaults exist and types are reasonable
+    # this make sure defaults exist and types are reasonable
     data = {
         "principal": req.get("principal", ""),
         "type": req.get("type", "api_key"),
