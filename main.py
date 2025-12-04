@@ -59,12 +59,7 @@ def decrypt_secret(enc):
 app = FastAPI(title="Simple Credential Maker")
 
 # --- CORS FIX: SPECIFIC ORIGINS ONLY ---
-origins = [
-    "http://127.0.0.1:5500",  # Your Live Server IP
-    "http://localhost:5500",  # Your Live Server localhost
-    "http://127.0.0.1:5501",  # Backup port just in case
-    "http://localhost:5501"
-]
+origins = ["*"] # We will lock this down later!
 
 app.add_middleware(
     CORSMiddleware,
