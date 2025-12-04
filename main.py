@@ -60,8 +60,6 @@ app = FastAPI(title="Simple Credential Maker")
 
 # --- CORS FIX: SPECIFIC ORIGINS ONLY ---
 origins = [
-    "http://127.0.0.1:5500",
-    "http://localhost:5500",
     "https://credential-generator-with-policy-co.vercel.app/" 
 ]
 
