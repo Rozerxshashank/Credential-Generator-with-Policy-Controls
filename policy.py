@@ -1,7 +1,3 @@
-# policy.py
-# simple rules for the credential maker (no typing module, easy to read)
-
-# the policy dictionary
 POLICY = {
     "allowed_types": ["api_key"],
 
