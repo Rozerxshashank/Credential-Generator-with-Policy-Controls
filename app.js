@@ -37,7 +37,7 @@ btnNavAdmin.onclick = function() {
 
 var baseUrlInput = document.getElementById("base-url");
 var saveBtn = document.getElementById("btn-save-url");
-var myUrl = "http://127.0.0.1:8000"; // Default
+var myUrl = "https://credential-generator-with-policy-controls.onrender.com"; // Default
 
 saveBtn.onclick = function() {
     myUrl = baseUrlInput.value;
