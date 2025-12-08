@@ -58,7 +58,8 @@ def decrypt_secret(enc):
 
 app = FastAPI(title="Simple Credential Maker")
 
-# --- CORS FIX: SPECIFIC ORIGINS ONLY ---
+
+#-----------------------------------------
 origins = [
     "https://credential-generator-with-policy-co.vercel.app/" 
 ]
