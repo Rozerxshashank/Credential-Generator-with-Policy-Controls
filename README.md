@@ -1,57 +1,90 @@
-=======
-# Simple Credential Maker (FastAPI + SQLite)
+# 🔑 Credential Manager (Full Stack)
 
-This is a minimal credential / API key service built with **FastAPI** and **SQLite**.  
-It lets you:
+A secure, policy-driven API Key management system. This application allows users to request API credentials with specific scopes, enforces administrative approval for sensitive permissions, and securely stores secrets using **Fernet (AES) encryption**.
 
-- Create credentials (API keys) with scopes and TTL
-- Enforce basic policy (min length, max TTL)
-- Enforce quotas per user
-- Mark sensitive scopes as **pending** for approval
-- Approve pending requests
-- Revoke credentials
-- (Dev only) Decrypt stored secrets to verify encryption
+![Project Status](https://img.shields.io/badge/Status-Live-success)
+![Stack](https://img.shields.io/badge/Stack-FastAPI%20%7C%20VanillaJS-blue)
+![Deployment](https://img.shields.io/badge/Deploy-Render%20%2B%20Vercel-purple)
 
----
+## 🚀 Live Demo
 
-## Features
+- **Frontend (User UI):** [https://credential-manager.vercel.app](https://credential-manager.vercel.app) *(Replace with your Vercel Link)*
+- **Backend (API):** [https://cred-manager-api.onrender.com](https://cred-manager-api.onrender.com) *(Replace with your Render Link)*
 
-- 🔐 **Encrypted storage** of secrets using `cryptography.Fernet`
-- 📦 **SQLite** backend (single file database)
-- 🧩 **Policy-driven validation** via `policy.py`
-- 🚦 **Approval flow** for sensitive scopes (`admin`, `write:*`)
-- 🔢 **Quota**: max 5 active keys per principal (configurable)
-- 🧰 **FastAPI** for HTTP endpoints (no Pydantic models required)
+> **Note:** The backend is hosted on Render's Free Tier. If the API doesn't respond immediately, please wait **30-60 seconds** for the server to wake up from sleep mode.
 
 ---
 
-## Project Structure
+## ✨ Key Features
 
-We effectively have two main files:
+### 🛡️ Security & Architecture
+- **Fernet Encryption:** API Secrets are encrypted before being stored in the database. Even the database admin cannot see raw keys.
+- **Role Separation:** Distinct interfaces for **Users** (Requesting) and **Admins** (Approving).
+- **CORS Protection:** Configured to only allow requests from the trusted frontend.
 
-- `main.py`  the FastAPI app:
+### ⚙️ Policy Engine
+- **Auto-Approval:** Read-only scopes (e.g., `read:users`) are issued immediately.
+- **Admin Approval:** Sensitive scopes (e.g., `admin`, `write:*`) trigger a "Pending" state requiring manual approval.
+- **Quotas:** Limits users to a maximum of 5 active keys.
 
-  - DB setup and helpers  
-  - `/credentials` create/list  
-  - `/credentials/{cid}/revoke`  
-  - `/requests/{rid}/approve`  
-  - `/_debug/decrypt/{cid}`
-
-- `policy.py` – policy configuration & checks:
-
-  - `POLICY`: rules (allowed types, min length, max TTL, quotas, approval scopes)  
-  - `validate_request(req)`  
-  - `requires_approval(scopes)`
+### 🖥️ UI/UX
+- **Dual Dashboard:** Switch between User and Admin views via sidebar navigation.
+- **Secure Key Claim:** Keys are never displayed immediately. Users receive an ID and must explicitly "Check Status" to claim the decrypted secret.
 
 ---
 
-## Requirements
+## 🛠️ Tech Stack
 
-- Python 3.9+ (recommended)
-- The following Python packages:
+**Backend:**
+- **Python 3.10+**
+- **FastAPI:** High-performance web framework.
+- **SQLite:** Lightweight relational database.
+- **Cryptography:** For Fernet symmetric encryption.
 
+**Frontend:**
+- **HTML5 / CSS3:** Custom responsive design (Flexbox/Grid).
+- **Vanilla JavaScript:** `fetch` API for backend communication.
+
+**DevOps:**
+- **Render:** Python backend hosting.
+- **Vercel:** Static frontend hosting.
+
+---
+
+## 📸 Usage Workflow
+
+### 1. User Workflow
+1.  Navigate to the **User Panel**.
+2.  Enter a **Principal Name** (username) and **Scopes**.
+3.  Click **Request Key**.
+    * *Safe Scopes:* You get an ID. Use "Check Status" to reveal the key immediately.
+    * *Risky Scopes (e.g., `admin`):* You get an ID. "Check Status" will show "Pending".
+
+### 2. Admin Workflow
+1.  Switch to the **Admin Panel**.
+2.  View the **All Credentials** list.
+3.  Copy a "Pending" Request ID.
+4.  Paste it into the **Approve Request** box and click Approve.
+5.  (Optional) Use **Revoke** to disable compromised keys.
+
+---
+
+## 💻 Local Installation
+
+If you want to run this project locally:
+
+### 1. Backend Setup
 ```bash
-fastapi
-uvicorn[standard]
-cryptography
-python-dotenv
+# Clone the repo
+git clone [https://github.com/yourusername/credential-manager.git](https://github.com/yourusername/credential-manager.git)
+cd credential-manager
+
+# Create virtual env (optional but recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the server
+uvicorn main:app --reload
